@@ -30,19 +30,17 @@ void KeyMap::loadKeyMap(const QString &json)
     // switchKey
     rootObj = jsonDoc.object();
 
-    if (!checkItemString(rootObj, "switchKey")) {
-        errorString = QString("json error: no find switchKey");
-        goto parseError;
+    if (checkItemString(rootObj, "switchKey")) {
+        switchKey = getItemKey(rootObj, "switchKey");
+        if (switchKey.first != AT_INVALID) {
+            m_switchKey.type = switchKey.first;
+            m_switchKey.key = switchKey.second;
+        }
+    } else {
+        // Default to QuoteLeft if not specified
+        m_switchKey.type = AT_Key;
+        m_switchKey.key = Qt::Key_QuoteLeft;
     }
-
-    switchKey = getItemKey(rootObj, "switchKey");
-    if (switchKey.first == AT_INVALID) {
-        errorString = QString("json error: switchKey invalid");
-        goto parseError;
-    }
-
-    m_switchKey.type = switchKey.first;
-    m_switchKey.key = switchKey.second;
 
     // mouseMoveMap
     if (checkItemObject(rootObj, "mouseMoveMap")) {

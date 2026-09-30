@@ -147,6 +147,10 @@ bool InputConvertGame::isCurrentCustomKeymap()
 void InputConvertGame::loadKeyMap(const QString &json)
 {
     m_keyMap.loadKeyMap(json);
+    // Auto-activate game mode if there are valid nodes so user doesn't wonder why buttons don't work
+    if (!m_gameMap && m_keyMap.getKeyMapNodes().size() > 0) {
+        switchGameMap();
+    }
 }
 
 void InputConvertGame::updateSize(const QSize &frameSize, const QSize &showSize)
