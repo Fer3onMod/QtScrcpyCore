@@ -38,7 +38,7 @@ void KeyMap::loadKeyMap(const QString &json)
         }
     } else {
         // Default to QuoteLeft if not specified
-        m_switchKey.type = AT_Key;
+        m_switchKey.type = AT_KEY;
         m_switchKey.key = Qt::Key_QuoteLeft;
     }
 

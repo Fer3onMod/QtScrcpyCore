@@ -118,6 +118,7 @@ public:
     virtual ~KeyMap();
 
     void loadKeyMap(const QString &json);
+    const QVector<KeyMapNode>& getKeyMapNodes() const { return m_keyMapNodes; }
     const KeyMap::KeyMapNode &getKeyMapNode(int key);
     const KeyMap::KeyMapNode &getKeyMapNodeKey(int key);
     const KeyMap::KeyMapNode &getKeyMapNodeMouse(int key);
