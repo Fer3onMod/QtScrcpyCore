@@ -100,12 +100,16 @@ bool writeAtomically(const QString &path, const QByteArray &contents, QString *e
 
 bool readLegacyNode(const QJsonObject &node, Scheme *scheme, QString *error)
 {
-    if (!node.value(QStringLiteral("type")).isString()
-        || !node.value(QStringLiteral("key")).isString()) {
-        setError(error, QStringLiteral("Legacy keyMapNodes entries require string type and key fields."));
+    if (!node.value(QStringLiteral("type")).isString()) {
+        setError(error, QStringLiteral("Legacy keyMapNodes entries require a string type field."));
         return false;
     }
     const QString type = node.value(QStringLiteral("type")).toString();
+    if (type != QStringLiteral("KMT_STEER_WHEEL")
+        && !node.value(QStringLiteral("key")).isString()) {
+        setError(error, QStringLiteral("Legacy %1 entries require a string key field.").arg(type));
+        return false;
+    }
     const QString key = node.value(QStringLiteral("key")).toString();
     const QString label = node.value(QStringLiteral("comment")).toString();
 
@@ -418,8 +422,8 @@ bool SchemeStore::migrateLegacyJson(const QByteArray &json, const QString &schem
         if (!KeyBinding::fromLegacyCode(legacySwitchKey, &aim->toggleKey, error)) return false;
 
         double ratio = 0.0;
-        double sensX = 0.0;
-        double sensY = 0.0;
+        double legacyRatioX = 0.0;
+        double legacyRatioY = 0.0;
         const QJsonValue ratioValue = mouseMap.value(QStringLiteral("speedRatio"));
         const QJsonValue xValue = mouseMap.value(QStringLiteral("speedRatioX"));
         const QJsonValue yValue = mouseMap.value(QStringLiteral("speedRatioY"));
@@ -446,14 +450,14 @@ bool SchemeStore::migrateLegacyJson(const QByteArray &json, const QString &schem
             return false;
         }
         ratio = ratioValue.toDouble(1.0);
-        sensX = xValue.toDouble(ratio);
-        sensY = yValue.toDouble(ratio > 0.0 ? ratio / 2.25 : 1.0);
+        legacyRatioX = xValue.toDouble(ratio);
+        legacyRatioY = yValue.toDouble(ratio > 0.0 ? ratio / 2.25 : 1.0);
         if (!xValue.isUndefined() && yValue.isUndefined() && ratioValue.isUndefined())
-            sensY = sensX / 2.25;
+            legacyRatioY = legacyRatioX / 2.25;
         if (!yValue.isUndefined() && xValue.isUndefined() && ratioValue.isUndefined())
-            sensX = sensY * 2.25;
-        aim->sensX = sensX;
-        aim->sensY = sensY;
+            legacyRatioX = legacyRatioY * 2.25;
+        aim->sensX = 1.0 / legacyRatioX;
+        aim->sensY = 1.0 / legacyRatioY;
         if (!aim->isValid(error)) return false;
         scheme.widgets.append(aim);
 
@@ -475,8 +479,8 @@ bool SchemeStore::migrateLegacyJson(const QByteArray &json, const QString &schem
             smallAim->id = newId();
             smallAim->position = smallPosition;
             smallAim->toggleKey = smallKey;
-            smallAim->sensX = sensX;
-            smallAim->sensY = sensY;
+            smallAim->sensX = aim->sensX;
+            smallAim->sensY = aim->sensY;
             smallAim->label = smallEyes.value(QStringLiteral("comment")).toString();
             scheme.widgets.append(smallAim);
         }

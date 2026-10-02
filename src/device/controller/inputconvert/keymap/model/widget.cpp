@@ -370,15 +370,16 @@ void AimWidget::writeSpecific(QJsonObject *json) const
 bool AimWidget::readSpecific(const QJsonObject &json, QString *error)
 {
     return readBindingFields(json, QStringLiteral("toggleKey"), QString(), &toggleKey, error)
-        && readSensitivity(json, &sensX, &sensY, error);
+        && numberInRange(json, QStringLiteral("sensX"), 0.0001, 10000.0, &sensX, error)
+        && numberInRange(json, QStringLiteral("sensY"), 0.0001, 10000.0, &sensY, error);
 }
 
 bool AimWidget::isValid(QString *error) const
 {
     if (!Widget::isValid(error) || !toggleKey.isValid(error)) return false;
-    if (!std::isfinite(sensX) || sensX < 0.001 || sensX > 10000.0
-        || !std::isfinite(sensY) || sensY < 0.001 || sensY > 10000.0) {
-        if (error) *error = QStringLiteral("Aim sensitivity must be within [0.001, 10000].");
+    if (!std::isfinite(sensX) || sensX < 0.0001 || sensX > 10000.0
+        || !std::isfinite(sensY) || sensY < 0.0001 || sensY > 10000.0) {
+        if (error) *error = QStringLiteral("Aim sensitivity must be within [0.0001, 10000].");
         return false;
     }
     return true;

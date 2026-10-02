@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QTemporaryDir>
 #include <QTextStream>
+#include <cmath>
 
 #include "schemestore.h"
 
@@ -77,7 +78,8 @@ void testVersionTwoReadWrite()
 
     SchemeStore store;
     QString error;
-    check(store.loadJson(document, &error), QStringLiteral("read v2 sample: %1").arg(error));
+    const bool loaded = store.loadJson(document, &error);
+    check(loaded, QStringLiteral("read v2 sample: %1").arg(error));
     check(store.schemes.size() == 1 && store.schemes.first().widgets.size() == 13,
           QStringLiteral("every v2 widget type is constructed"));
     const QByteArray saved = store.toJson(&error);
@@ -136,6 +138,20 @@ void testLegacyFixtures()
               QStringLiteral("legacy migration emits one local scheme: %1").arg(fixture));
         check(!migrated.toJson().isEmpty(),
               QStringLiteral("migrated legacy fixture validates: %1").arg(fixture));
+        if (fixture == QStringLiteral("FRAG.json") && migrated.schemes.size() == 1) {
+            bool foundAim = false;
+            for (const std::shared_ptr<Widget> &widget : migrated.schemes.first().widgets) {
+                const std::shared_ptr<AimWidget> aim = std::dynamic_pointer_cast<AimWidget>(widget);
+                if (aim) {
+                    foundAim = true;
+                    check(std::fabs(aim->sensX - (1.0 / 3.25)) < 1e-9
+                              && std::fabs(aim->sensY - (1.0 / 1.25)) < 1e-9,
+                          QStringLiteral("legacy mouse sensitivity divisors preserve movement scale"));
+                    break;
+                }
+            }
+            check(foundAim, QStringLiteral("FRAG migration retains the aim mapping"));
+        }
     }
 }
 
