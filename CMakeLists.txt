@@ -14,9 +14,10 @@ if (NOT QT_DESIRED_VERSION)
     set(QT_DESIRED_VERSION ${QT_VERSION_MAJOR})
 endif()
 
-find_package(Qt${QT_DESIRED_VERSION} REQUIRED COMPONENTS Widgets Network)
+find_package(Qt${QT_DESIRED_VERSION} REQUIRED COMPONENTS Core Widgets Network)
 
 set(LINK_LIBS
+    Qt${QT_DESIRED_VERSION}::Core
     Qt${QT_DESIRED_VERSION}::Widgets
     Qt${QT_DESIRED_VERSION}::Network
 )
@@ -138,9 +139,38 @@ add_library(QtScrcpyCore STATIC
   ${QSC_DEVICEMANAGE_SOURCES}
 )
 
+set(QSC_KEYMAP_MODEL_SOURCES
+    src/device/controller/inputconvert/keymap/model/keybinding.h
+    src/device/controller/inputconvert/keymap/model/keybinding.cpp
+    src/device/controller/inputconvert/keymap/model/widget.h
+    src/device/controller/inputconvert/keymap/model/widget.cpp
+    src/device/controller/inputconvert/keymap/model/scheme.h
+    src/device/controller/inputconvert/keymap/model/scheme.cpp
+    src/device/controller/inputconvert/keymap/model/schemestore.h
+    src/device/controller/inputconvert/keymap/model/schemestore.cpp
+)
+
+add_library(QtScrcpyKeymapModel STATIC ${QSC_KEYMAP_MODEL_SOURCES})
+target_link_libraries(QtScrcpyKeymapModel PUBLIC Qt${QT_DESIRED_VERSION}::Core)
+target_include_directories(QtScrcpyKeymapModel PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/device/controller/inputconvert/keymap/model
+)
+target_link_libraries(QtScrcpyCore PRIVATE QtScrcpyKeymapModel)
+
 target_link_libraries(QtScrcpyCore PRIVATE
     ${LINK_LIBS}
 )
+
+if(BUILD_TESTING)
+    add_executable(QtScrcpyKeymapModelTests
+        tests/keymap_model_tests.cpp
+    )
+    target_link_libraries(QtScrcpyKeymapModelTests PRIVATE QtScrcpyKeymapModel)
+    target_compile_definitions(QtScrcpyKeymapModelTests PRIVATE
+        QSC_KEYMAP_FIXTURE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/../../keymap"
+    )
+    add_test(NAME QtScrcpyKeymapModelTests COMMAND QtScrcpyKeymapModelTests)
+endif()
 
 set_target_properties(${QSC_PROJECT_NAME} PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${QSC_DEPLOY_PATH}/$<0:>"
