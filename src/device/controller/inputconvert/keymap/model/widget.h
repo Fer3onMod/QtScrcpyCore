@@ -175,7 +175,10 @@ public:
 
 protected:
     void writeSpecific(QJsonObject *) const override {}
-    bool readSpecific(const QJsonObject &, QString *) override { return true; }
+    bool readSpecific(const QJsonObject &json, QString *error) override
+    {
+        return readBinding(json, error);
+    }
 };
 
 class ViewAngleWidget : public BoundWidget
@@ -213,7 +216,10 @@ public:
 
 protected:
     void writeSpecific(QJsonObject *) const override {}
-    bool readSpecific(const QJsonObject &, QString *) override { return true; }
+    bool readSpecific(const QJsonObject &json, QString *error) override
+    {
+        return readBinding(json, error);
+    }
 };
 
 class CancelCastWidget : public BoundWidget
@@ -223,7 +229,10 @@ public:
 
 protected:
     void writeSpecific(QJsonObject *) const override {}
-    bool readSpecific(const QJsonObject &, QString *) override { return true; }
+    bool readSpecific(const QJsonObject &json, QString *error) override
+    {
+        return readBinding(json, error);
+    }
 };
 
 class VisionExtensionWidget : public BoundWidget
@@ -233,7 +242,10 @@ public:
 
 protected:
     void writeSpecific(QJsonObject *) const override {}
-    bool readSpecific(const QJsonObject &, QString *) override { return true; }
+    bool readSpecific(const QJsonObject &json, QString *error) override
+    {
+        return readBinding(json, error);
+    }
 };
 
 #endif
