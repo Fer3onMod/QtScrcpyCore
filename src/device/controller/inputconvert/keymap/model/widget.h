@@ -52,6 +52,7 @@ public:
     int tapCount = 1;
     bool releaseMouse = false;
     int androidKey = -1;
+    bool smart = false;
 
     QString type() const override { return QStringLiteral("key"); }
     bool isValid(QString *error = nullptr) const override;

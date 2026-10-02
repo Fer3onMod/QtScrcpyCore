@@ -78,6 +78,21 @@ bool readBindingFields(const QJsonObject &json, const QString &codeName,
     return KeyBinding::fromJson(bindingJson, binding, error);
 }
 
+bool readJoystickBinding(const QJsonObject &json, const QString &name,
+                         KeyBinding *binding, QString *error)
+{
+    const QJsonValue value = json.value(name);
+    if (value.isString()) {
+        binding->code = value.toString();
+        return binding->isValid(error);
+    }
+    if (value.isObject()) {
+        return KeyBinding::fromJson(value.toObject(), binding, error);
+    }
+    if (error) *error = QStringLiteral("Joystick direction %1 must be a key code or binding object.").arg(name);
+    return false;
+}
+
 void writeBindingFields(QJsonObject *json, const QString &codeName,
                         const QString &modifiersName, const KeyBinding &binding)
 {
@@ -242,6 +257,7 @@ void KeyWidget::writeSpecific(QJsonObject *json) const
 {
     json->insert(QStringLiteral("tapCount"), tapCount);
     json->insert(QStringLiteral("releaseMouse"), releaseMouse);
+    json->insert(QStringLiteral("smart"), smart);
     if (androidKey >= 0) json->insert(QStringLiteral("androidKey"), androidKey);
 }
 
@@ -259,6 +275,13 @@ bool KeyWidget::readSpecific(const QJsonObject &json, QString *error)
     }
     if (json.contains(QStringLiteral("androidKey"))
         && !integerInRange(json, QStringLiteral("androidKey"), 0, 1000, &androidKey, error)) return false;
+    if (json.contains(QStringLiteral("smart"))) {
+        if (!json.value(QStringLiteral("smart")).isBool()) {
+            if (error) *error = QStringLiteral("smart must be a boolean.");
+            return false;
+        }
+        smart = json.value(QStringLiteral("smart")).toBool();
+    }
     return true;
 }
 
@@ -275,10 +298,15 @@ bool KeyWidget::isValid(QString *error) const
 void JoystickWidget::writeSpecific(QJsonObject *json) const
 {
     QJsonObject keys;
-    keys.insert(QStringLiteral("up"), up.code);
-    keys.insert(QStringLiteral("left"), left.code);
-    keys.insert(QStringLiteral("down"), down.code);
-    keys.insert(QStringLiteral("right"), right.code);
+    const KeyBinding *bindings[] = {&up, &left, &down, &right};
+    const QString names[] = {QStringLiteral("up"), QStringLiteral("left"),
+                             QStringLiteral("down"), QStringLiteral("right")};
+    for (int i = 0; i < 4; ++i) {
+        if (bindings[i]->modifiers.isEmpty())
+            keys.insert(names[i], bindings[i]->code);
+        else
+            keys.insert(names[i], bindings[i]->toJson());
+    }
     json->insert(QStringLiteral("keys"), keys);
     json->insert(QStringLiteral("radius"), radius);
     json->insert(QStringLiteral("speed"), speed);
@@ -301,10 +329,10 @@ bool JoystickWidget::readSpecific(const QJsonObject &json, QString *error)
         return false;
     }
     const QJsonObject keys = json.value(QStringLiteral("keys")).toObject();
-    if (!readBindingFields(keys, QStringLiteral("up"), QString(), &up, error)
-        || !readBindingFields(keys, QStringLiteral("left"), QString(), &left, error)
-        || !readBindingFields(keys, QStringLiteral("down"), QString(), &down, error)
-        || !readBindingFields(keys, QStringLiteral("right"), QString(), &right, error)
+    if (!readJoystickBinding(keys, QStringLiteral("up"), &up, error)
+        || !readJoystickBinding(keys, QStringLiteral("left"), &left, error)
+        || !readJoystickBinding(keys, QStringLiteral("down"), &down, error)
+        || !readJoystickBinding(keys, QStringLiteral("right"), &right, error)
         || !numberInRange(json, QStringLiteral("radius"), 1.0, 512.0, &radius, error)
         || !numberInRange(json, QStringLiteral("speed"), 0.1, 100.0, &speed, error)) {
         return false;
@@ -363,13 +391,14 @@ bool JoystickWidget::isValid(QString *error) const
 
 void AimWidget::writeSpecific(QJsonObject *json) const
 {
-    json->insert(QStringLiteral("toggleKey"), toggleKey.code);
+    writeBindingFields(json, QStringLiteral("toggleKey"), QStringLiteral("toggleModifiers"), toggleKey);
     writeSensitivity(json, sensX, sensY);
 }
 
 bool AimWidget::readSpecific(const QJsonObject &json, QString *error)
 {
-    return readBindingFields(json, QStringLiteral("toggleKey"), QString(), &toggleKey, error)
+    return readBindingFields(json, QStringLiteral("toggleKey"), QStringLiteral("toggleModifiers"),
+                             &toggleKey, error)
         && numberInRange(json, QStringLiteral("sensX"), 0.0001, 10000.0, &sensX, error)
         && numberInRange(json, QStringLiteral("sensY"), 0.0001, 10000.0, &sensY, error);
 }

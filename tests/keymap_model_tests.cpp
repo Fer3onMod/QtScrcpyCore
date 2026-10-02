@@ -56,9 +56,9 @@ void testVersionTwoReadWrite()
         "name": "Local Key (1)",
         "type": "local",
         "widgets": [
-          {"id":"key-1","type":"key","code":"KeyF","modifiers":["Control"],"x":0.52,"y":0.28,"size":40,"z":3,"enabled":true},
-          {"id":"move-1","type":"joystick","keys":{"up":"KeyW","left":"KeyA","down":"KeyS","right":"KeyD"},"x":0.12,"y":0.78,"radius":60,"speed":8,"enabled":true},
-          {"id":"aim-1","type":"aim","toggleKey":"Backquote","x":0.37,"y":0.35,"sensX":25,"sensY":25,"enabled":true},
+          {"id":"key-1","type":"key","code":"KeyF","modifiers":["Control"],"x":0.52,"y":0.28,"size":40,"z":3,"enabled":true,"smart":true},
+          {"id":"move-1","type":"joystick","keys":{"up":"KeyW","left":{"code":"KeyA","modifiers":["Alt"]},"down":"KeyS","right":"KeyD"},"x":0.12,"y":0.78,"radius":60,"speed":8,"enabled":true},
+          {"id":"aim-1","type":"aim","toggleKey":"Backquote","toggleModifiers":["Control"],"x":0.37,"y":0.35,"sensX":25,"sensY":25,"enabled":true},
           {"id":"fire-1","type":"fire","code":"MouseLeft","x":0.8,"y":0.8,"radius":24},
           {"id":"slide-1","type":"slide","code":"KeyG","x":0.4,"y":0.6,"endX":0.4,"endY":0.2},
           {"id":"macro-1","type":"macro","code":"KeyM","x":0.5,"y":0.5,"steps":[
@@ -82,6 +82,20 @@ void testVersionTwoReadWrite()
     check(loaded, QStringLiteral("read v2 sample: %1").arg(error));
     check(store.schemes.size() == 1 && store.schemes.first().widgets.size() == 13,
           QStringLiteral("every v2 widget type is constructed"));
+    if (loaded && !store.schemes.first().widgets.isEmpty()) {
+        const std::shared_ptr<KeyWidget> keyWidget =
+            std::dynamic_pointer_cast<KeyWidget>(store.schemes.first().widgets.first());
+        check(keyWidget && keyWidget->smart,
+              QStringLiteral("smart key flag is preserved by the v2 model"));
+        const std::shared_ptr<JoystickWidget> joystick =
+            std::dynamic_pointer_cast<JoystickWidget>(store.schemes.first().widgets.at(1));
+        check(joystick && joystick->left.modifiers == QStringList{QStringLiteral("Alt")},
+              QStringLiteral("joystick direction modifiers are preserved"));
+        const std::shared_ptr<AimWidget> aim =
+            std::dynamic_pointer_cast<AimWidget>(store.schemes.first().widgets.at(2));
+        check(aim && aim->toggleKey.modifiers == QStringList{QStringLiteral("Control")},
+              QStringLiteral("aim toggle modifiers are preserved"));
+    }
     const QByteArray saved = store.toJson(&error);
     SchemeStore reloaded;
     check(!saved.isEmpty() && reloaded.loadJson(saved, &error),
