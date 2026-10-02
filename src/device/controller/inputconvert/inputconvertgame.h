@@ -20,7 +20,7 @@ public:
     virtual void keyEvent(const QKeyEvent *from, const QSize &frameSize, const QSize &showSize);
     virtual bool isCurrentCustomKeymap();
 
-    void loadKeyMap(const QString &json);
+    bool loadKeyMap(const QString &json);
 
 protected:
     void updateSize(const QSize &frameSize, const QSize &showSize);

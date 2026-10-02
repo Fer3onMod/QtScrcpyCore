@@ -1,5 +1,6 @@
 #include "videobuffer.h"
 #include "avframeconvert.h"
+#include <QMutexLocker>
 extern "C"
 {
 #include "libavformat/avformat.h"
@@ -113,46 +114,56 @@ void VideoBuffer::peekRenderedFrame(std::function<void(int width, int height, ui
         return;
     }
 
-    lock();
+    QMutexLocker locker(&m_mutex);
     auto frame = m_renderingframe;
+    if (!frame) {
+        return;
+    }
     int width = frame->width;
     int height = frame->height;
-    int linesize = frame->linesize[0];
+    if (width <= 0 || height <= 0) {
+        return;
+    }
 
-    // create buffer
-    uint8_t* rgbBuffer = new uint8_t[linesize * height * 4];
+    const int bufferSize = av_image_get_buffer_size(AV_PIX_FMT_RGB32, width, height, 1);
+    if (bufferSize <= 0) {
+        return;
+    }
+
+    uint8_t *rgbBuffer = static_cast<uint8_t *>(av_malloc(static_cast<size_t>(bufferSize)));
+    if (!rgbBuffer) {
+        return;
+    }
     AVFrame *rgbFrame = av_frame_alloc();
     if (!rgbFrame) {
-        delete [] rgbBuffer;
+        av_free(rgbBuffer);
         return;
     }
 
     // bind buffer to AVFrame
-    av_image_fill_arrays(rgbFrame->data, rgbFrame->linesize, rgbBuffer, AV_PIX_FMT_RGB32, width, height, 4);
+    if (av_image_fill_arrays(rgbFrame->data, rgbFrame->linesize, rgbBuffer,
+                             AV_PIX_FMT_RGB32, width, height, 1) < 0) {
+        av_frame_free(&rgbFrame);
+        av_free(rgbBuffer);
+        return;
+    }
 
     // convert
     AVFrameConvert convert;
     convert.setSrcFrameInfo(width, height, AV_PIX_FMT_YUV420P);
     convert.setDstFrameInfo(width, height, AV_PIX_FMT_RGB32);
     bool ret = false;
-    ret = convert.init();
-    if (!ret) {
-        delete [] rgbBuffer;
-        av_free(rgbFrame);
-        return;
-    }
-    ret = convert.convert(frame, rgbFrame);
-    if (!ret) {
-        delete [] rgbBuffer;
-        av_free(rgbFrame);
-        return;
-    }
+    ret = convert.init() && convert.convert(frame, rgbFrame);
     convert.deInit();
-    av_free(rgbFrame);
-    unLock();
+    av_frame_free(&rgbFrame);
+    if (!ret) {
+        av_free(rgbBuffer);
+        return;
+    }
 
+    locker.unlock();
     onFrame(width, height, rgbBuffer);
-    delete [] rgbBuffer;
+    av_free(rgbBuffer);
 }
 
 void VideoBuffer::interrupt()

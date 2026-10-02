@@ -117,7 +117,7 @@ public:
     KeyMap(QObject *parent = Q_NULLPTR);
     virtual ~KeyMap();
 
-    void loadKeyMap(const QString &json);
+    bool loadKeyMap(const QString &json, bool reportSuccess = true);
     const QVector<KeyMapNode>& getKeyMapNodes() const { return m_keyMapNodes; }
     const KeyMap::KeyMapNode &getKeyMapNode(int key);
     const KeyMap::KeyMapNode &getKeyMapNodeKey(int key);

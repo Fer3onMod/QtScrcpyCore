@@ -144,13 +144,16 @@ bool InputConvertGame::isCurrentCustomKeymap()
     return m_gameMap;
 }
 
-void InputConvertGame::loadKeyMap(const QString &json)
+bool InputConvertGame::loadKeyMap(const QString &json)
 {
-    m_keyMap.loadKeyMap(json);
+    if (!m_keyMap.loadKeyMap(json)) {
+        return false;
+    }
     // Auto-activate game mode if there are valid nodes so user doesn't wonder why buttons don't work
     if (!m_gameMap && m_keyMap.getKeyMapNodes().size() > 0) {
         switchGameMap();
     }
+    return true;
 }
 
 void InputConvertGame::updateSize(const QSize &frameSize, const QSize &showSize)
@@ -275,6 +278,12 @@ void InputConvertGame::getDelayQueue(const QPointF& start, const QPointF& end,
                                      const double& distanceStep, const double& posStepconst,
                                      quint32 lowestTimer, quint32 highestTimer,
                                      QQueue<QPointF>& queuePos, QQueue<quint32>& queueTimer) {
+    queuePos.clear();
+    queueTimer.clear();
+    if (distanceStep <= 0) {
+        return;
+    }
+
     double x1 = start.x();
     double y1 = start.y();
     double x2 = end.x();
@@ -283,6 +292,9 @@ void InputConvertGame::getDelayQueue(const QPointF& start, const QPointF& end,
     double dx=x2-x1;
     double dy=y2-y1;
     double e=(fabs(dx)>fabs(dy))?fabs(dx):fabs(dy);
+    if (e == 0) {
+        return;
+    }
     e /= distanceStep;
     dx/=e;
     dy/=e;

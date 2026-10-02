@@ -65,15 +65,26 @@ void Controller::test(QRect rc)
 
 void Controller::updateScript(QString gameScript)
 {
-    if (m_inputConvert) {
-        delete m_inputConvert;
-    }
+    InputConvertBase *newInputConvert = nullptr;
     if (!gameScript.isEmpty()) {
         InputConvertGame *convertgame = new InputConvertGame(this);
-        convertgame->loadKeyMap(gameScript);
-        m_inputConvert = convertgame;
+        if (!convertgame->loadKeyMap(gameScript)) {
+            delete convertgame;
+            if (!m_inputConvert) {
+                m_inputConvert = new InputConvertNormal(this);
+                connect(m_inputConvert, &InputConvertBase::grabCursor, this, &Controller::grabCursor);
+            }
+            return;
+        }
+        newInputConvert = convertgame;
     } else {
-        m_inputConvert = new InputConvertNormal(this);
+        newInputConvert = new InputConvertNormal(this);
+    }
+
+    InputConvertBase *previousInputConvert = m_inputConvert;
+    m_inputConvert = newInputConvert;
+    if (previousInputConvert) {
+        delete previousInputConvert;
     }
     Q_ASSERT(m_inputConvert);
     connect(m_inputConvert, &InputConvertBase::grabCursor, this, &Controller::grabCursor);
